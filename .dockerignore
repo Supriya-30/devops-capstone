@@ -1,0 +1,8 @@
+**/__pycache__
+**/.pytest_cache
+.git
+.github
+terraform
+helm
+monitoring
+README.md

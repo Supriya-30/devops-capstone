@@ -1,0 +1,38 @@
+# Default values. Override per environment:
+#   helm upgrade --install flask-app ./helm/flask-app \
+#     --set image.repository=<your-dockerhub-user>/devops-capstone \
+#     --set image.tag=<git-sha> -n demo --create-namespace
+
+replicaCount: 2
+
+image:
+  repository: yourdockerhubuser/devops-capstone
+  tag: latest            # CI overrides this with the git SHA — never rely on latest in prod
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5000
+
+resources:
+  requests:
+    cpu: 100m            # HPA percentages are computed against requests
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+probes:
+  path: /health
+  livenessInitialDelaySeconds: 5
+  readinessInitialDelaySeconds: 3
+
+env:
+  APP_ENV: kubernetes

@@ -1,0 +1,106 @@
+# CI/CD pipeline (README architecture):
+#   Stage 1: pytest            <- quality gate #1
+#   Stage 2: build + Trivy     <- quality gate #2 (DevSecOps)
+#   Stage 3: push image, tag = git SHA (immutable, traceable artifact)
+#   Stage 4: helm upgrade      <- zero-downtime rolling deployment
+#
+# Required repo secrets:
+#   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN     (Phase 3)
+#   KUBE_CONFIG (base64-encoded kubeconfig) (Phase 4 — deploy job is skipped until set)
+name: ci-cd
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/devops-capstone
+
+jobs:
+  test:
+    name: "Stage 1 — Unit tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r app/requirements.txt -r app/requirements-dev.txt
+      - name: Lint
+        run: flake8 app --max-line-length=100
+      - name: Run pytest
+        run: cd app && python -m pytest -v
+
+  build-scan-push:
+    name: "Stage 2+3 — Build, Trivy scan, push"
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image (tag = git SHA)
+        run: |
+          docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
+
+      - name: Trivy scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push image
+        run: |
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+  deploy:
+    name: "Stage 4 — Helm deploy"
+    needs: build-scan-push
+    runs-on: ubuntu-latest
+    # Deploy only runs once the KUBE_CONFIG secret exists (Phase 4 of the README)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production          # add required reviewers here for an approval gate
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          if [ -z "$KUBE_CONFIG" ]; then
+            echo "KUBE_CONFIG secret not set — skipping deploy (Phase 4 not enabled yet)."
+            echo "SKIP_DEPLOY=true" >> "$GITHUB_ENV"
+          else
+            mkdir -p ~/.kube
+            echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+          fi
+
+      - name: Install Helm
+        if: env.SKIP_DEPLOY != 'true'
+        uses: azure/setup-helm@v4
+
+      - name: Helm upgrade (rolling deployment)
+        if: env.SKIP_DEPLOY != 'true'
+        run: |
+          helm upgrade --install flask-app ./helm/flask-app \
+            --set image.repository=$IMAGE \
+            --set image.tag=${{ github.sha }} \
+            -n demo --create-namespace \
+            --wait --timeout 3m
+
+      - name: Verify rollout (release validation)
+        if: env.SKIP_DEPLOY != 'true'
+        run: kubectl rollout status deployment/flask-app -n demo --timeout=120s
