@@ -16,7 +16,7 @@ on:
     branches: [main]
 
 env:
-  IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/devops-capstone
+  IMAGE: "${{ secrets.DOCKERHUB_USERNAME }}/devops-capstone"
 
 jobs:
   test:
@@ -49,7 +49,11 @@ jobs:
 
       - name: Build image (tag = git SHA)
         run: |
-          docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
+          pwd
+          ls -la
+          echo "IMAGE=$IMAGE"
+          test -f Dockerfile && echo "Dockerfile found" || echo "Dockerfile NOT found"
+           docker build --progress=plain -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" .
 
       - name: Trivy scan (fail on HIGH/CRITICAL)
         uses: aquasecurity/trivy-action@master
