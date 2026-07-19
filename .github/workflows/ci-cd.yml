@@ -43,6 +43,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug IMAGE
+        run: |
+           echo "IMAGE=$IMAGE"
+
       - name: Build image (tag = git SHA)
         run: |
           docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
