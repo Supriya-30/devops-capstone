@@ -9,19 +9,17 @@
 #   KUBE_CONFIG (base64-encoded kubeconfig) (Phase 4 — deploy job is skipped until set)
 
 name: ci-cd
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-
 env:
+
   IMAGE: "supriyaswa/devops-capstone"
-  # Alternative: build the image name from a secret instead of hardcoding it above.
-  # IMAGE: "${{ secrets.DOCKERHUB_USERNAME }}/devops-capstone"
+  #IMAGE: "${{ secrets.DOCKERHUB_USERNAME }}/devops-capstone"
 
 jobs:
   test:
@@ -50,7 +48,7 @@ jobs:
 
       - name: Debug IMAGE
         run: |
-          echo "IMAGE=$IMAGE"
+           echo "IMAGE=$IMAGE"
 
       - name: Build image (tag = git SHA)
         run: |
@@ -58,10 +56,10 @@ jobs:
           ls -la
           echo "IMAGE=$IMAGE"
           test -f Dockerfile && echo "Dockerfile found" || echo "Dockerfile NOT found"
-          docker build --progress=plain -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" .
+           docker build --progress=plain -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" .
 
       - name: Trivy scan (fail on HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.IMAGE }}:${{ github.sha }}
           severity: HIGH,CRITICAL
@@ -117,5 +115,6 @@ jobs:
       - name: Verify rollout (release validation)
         if: env.SKIP_DEPLOY != 'true'
         run: kubectl rollout status deployment/flask-app -n demo --timeout=120s
+
 
       
