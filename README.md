@@ -165,12 +165,3 @@ terraform destroy              # IMPORTANT: destroy when done to stop billing
 - Hardened Kubernetes workloads: non-root, read-only root filesystem, dropped capabilities, seccomp, liveness/readiness probes, HPA autoscaling, zero-downtime rolling updates.
 - Provisioned AWS infrastructure (VPC, EKS) with Terraform official modules; nodes in private subnets, remote-state best practices.
 
-## Quick revision notes
-
-- CI = build + test every commit. CD (GitOps) = Git commit *is* the deploy; an agent converges the cluster to Git.
-- Docker image = immutable artifact; container = running instance. SHA tags > `latest`.
-- Deployment → ReplicaSet → Pods. Service = stable VIP + label-selector load balancing. Ingress = L7 entry point.
-- Helm = K8s package manager; one chart, per-env values; ArgoCD renders charts server-side.
-- ArgoCD: Application CRD = "sync this repo path to this cluster/namespace"; automated + selfHeal + prune.
-- Terraform: init → plan → apply → destroy; state = source of truth; S3 backend + DynamoDB locking in teams.
-- Prometheus pulls; multiprocess mode aggregates across gunicorn workers; alert on symptoms (error rate, latency).
