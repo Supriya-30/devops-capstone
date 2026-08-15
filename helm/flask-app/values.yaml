@@ -1,0 +1,50 @@
+# Default values (the GitOps source of truth for the image tag).
+# The CI pipeline commits the new git-SHA tag here; ArgoCD syncs it to the
+# cluster. Per-environment overrides live in values-dev.yaml / values-prod.yaml.
+
+replicaCount: 2
+
+image:
+  repository: yourdockerhubuser/devops-capstone
+  tag: latest            # <- CI overwrites this line with the git SHA on every release
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5000
+
+ingress:
+  enabled: false         # enable per environment; requires an ingress controller
+  className: nginx
+  host: capstone.local   # for minikube: `minikube addons enable ingress` + /etc/hosts entry
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 100m            # HPA percentages are computed against requests
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  # NOTE: on minikube, HPA shows <unknown> CPU until you run:
+  #   minikube addons enable metrics-server
+
+serviceMonitor:
+  enabled: false         # enable when kube-prometheus-stack is installed
+  interval: 15s
+  extraLabels: {}        # e.g. release: kube-prometheus-stack
+
+probes:
+  path: /health
+  livenessInitialDelaySeconds: 5
+  readinessInitialDelaySeconds: 3
+
+env:
+  APP_ENV: kubernetes

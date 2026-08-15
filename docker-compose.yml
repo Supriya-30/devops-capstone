@@ -1,0 +1,31 @@
+# Local stack (README Phase 2): app + Prometheus (9090) + Grafana (3000)
+# Run: docker compose up --build
+# Grafana login: admin / admin (it will ask you to change it)
+# Then add Prometheus data source: http://prometheus:9090 and graph rate(app_requests_total[1m])
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      APP_ENV: docker-compose
+      APP_VERSION: 1.0.0
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus

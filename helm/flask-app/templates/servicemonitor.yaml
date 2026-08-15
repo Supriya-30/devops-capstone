@@ -1,0 +1,25 @@
+{{- if .Values.serviceMonitor.enabled }}
+# How Prometheus ACTUALLY discovers apps in real clusters:
+# kube-prometheus-stack ignores prometheus.io/* pod annotations and instead
+# watches ServiceMonitor CRDs. This resource says "scrape the Service that
+# matches these labels, on this port, at this path, every N seconds".
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+    # kube-prometheus-stack only picks up ServiceMonitors whose labels match
+    # its selector; "release: <prometheus release name>" is the common default.
+    {{- with .Values.serviceMonitor.extraLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.serviceMonitor.interval }}
+{{- end }}

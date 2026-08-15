@@ -1,0 +1,19 @@
+# Prod environment overrides (EKS):
+#   helm upgrade --install flask-app . -f values.yaml -f values-prod.yaml -n prod --create-namespace
+# (Or point a second ArgoCD Application at this values file.)
+env:
+  APP_ENV: production
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 10
+serviceMonitor:
+  enabled: true
+  extraLabels:
+    release: kube-prometheus-stack
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

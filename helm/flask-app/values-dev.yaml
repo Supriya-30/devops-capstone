@@ -1,0 +1,10 @@
+# Dev environment overrides (minikube):
+#   helm upgrade --install flask-app . -f values.yaml -f values-dev.yaml -n demo --create-namespace
+replicaCount: 1
+autoscaling:
+  enabled: false          # save laptop resources; test HPA separately
+env:
+  APP_ENV: dev
+ingress:
+  enabled: true           # minikube addons enable ingress
+  host: capstone.local

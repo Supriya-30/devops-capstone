@@ -1,0 +1,36 @@
+# ArgoCD Application — the pull-based deployer that replaces v1's CI deploy job.
+#
+# One-time setup on the cluster (minikube or EKS):
+#   kubectl create namespace argocd
+#   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+#   # edit repoURL below to YOUR fork, then:
+#   kubectl apply -f argocd/application.yaml
+#   # UI: kubectl port-forward svc/argocd-server -n argocd 8080:443
+#   # password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+#
+# From then on: every CI-committed tag bump in helm/flask-app/values.yaml is
+# detected and synced automatically. Rollback = `git revert` the bump commit.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flask-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/<your-user>/devops-capstone.git   # <- change me
+    targetRevision: main
+    path: helm/flask-app
+    helm:
+      valueFiles:
+        - values.yaml
+        # For a dev cluster, also add: - values-dev.yaml
+  destination:
+    server: https://kubernetes.default.svc   # deploy into the same cluster ArgoCD runs in
+    namespace: demo
+  syncPolicy:
+    automated:
+      prune: true      # delete resources removed from Git (Git is the source of truth)
+      selfHeal: true   # revert manual kubectl edits — this IS drift detection
+    syncOptions:
+      - CreateNamespace=true
