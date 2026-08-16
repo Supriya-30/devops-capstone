@@ -1,4 +1,5 @@
 """Unit tests — Stage 1 quality gate in the CI pipeline. Run with: pytest -v"""
+# triggering pipeline test
 import sys
 import os
 
