@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ---------- Stage 2: runtime ----------
 FROM python:3.12-slim
-
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 # Security: never run containers as root
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
