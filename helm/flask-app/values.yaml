@@ -6,7 +6,7 @@ replicaCount: 2
 
 image:
   repository: yourdockerhubuser/devops-capstone
-  tag: latest            # <- CI overwrites this line with the git SHA on every release
+  tag: 150822230a7ae31d2e37df7966d42282237795e6            # set by CI (do not edit by hand)
   pullPolicy: IfNotPresent
 
 service:
